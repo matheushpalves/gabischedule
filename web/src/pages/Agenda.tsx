@@ -4,9 +4,11 @@ import {
   COLOR_STYLES,
   EVENT_REPEATS,
   EVENT_REPEAT_LABELS,
+  MAX_NOTIFICATIONS,
   NOTIFY_OPTIONS,
   endsNextDay,
   notifyLabel,
+  notifyListLabel,
   type CalendarEvent,
   type ColorName,
   type EventInput,
@@ -126,7 +128,7 @@ export function AgendaPage() {
                       {e.place}
                     </span>
                   )}
-                  {(e.repeat !== 'once' || e.notifyMinutes !== null) && (
+                  {(e.repeat !== 'once' || e.notifyMinutes.length > 0) && (
                     <span className="row wrap" style={{ gap: 12, fontSize: 13, color: s.fg }}>
                       {e.repeat !== 'once' && (
                         <span className="row" style={{ gap: 6 }}>
@@ -134,10 +136,10 @@ export function AgendaPage() {
                           {EVENT_REPEAT_LABELS[e.repeat]}
                         </span>
                       )}
-                      {e.notifyMinutes !== null && (
+                      {e.notifyMinutes.length > 0 && (
                         <span className="row" style={{ gap: 6 }}>
                           <Icon name="bell" size={14} strokeWidth={2.2} />
-                          {notifyLabel(e.notifyMinutes)}
+                          {notifyListLabel(e.notifyMinutes)}
                         </span>
                       )}
                     </span>
@@ -193,7 +195,7 @@ function EventSheet({
   const [color, setColor] = useState<ColorName>(event?.color ?? 'rosa');
   const [repeat, setRepeat] = useState<EventRepeat>(event?.repeat ?? 'once');
   const [repeatUntil, setRepeatUntil] = useState(event?.repeatUntil ?? '');
-  const [notifyMinutes, setNotifyMinutes] = useState<number | null>(event?.notifyMinutes ?? null);
+  const [notifyMinutes, setNotifyMinutes] = useState<number[]>(event?.notifyMinutes ?? []);
   const [push, setPush] = useState<PushState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -288,20 +290,30 @@ function EventSheet({
             <span />
           )}
         </div>
-        <Field label="Notificação">
-          <select
-            className="input"
-            value={notifyMinutes === null ? '' : String(notifyMinutes)}
-            onChange={(e) => setNotifyMinutes(e.target.value === '' ? null : Number(e.target.value))}
-          >
-            {NOTIFY_OPTIONS.map((m) => (
-              <option key={String(m)} value={m === null ? '' : String(m)}>
-                {notifyLabel(m)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {notifyMinutes !== null && push !== null && push !== 'on' && (
+        <div className="field">
+          <span className="label" id="notify-label">
+            Notificações {notifyMinutes.length > 0 && <span style={{ fontWeight: 700 }}>· {notifyListLabel(notifyMinutes)}</span>}
+          </span>
+          <div className="row wrap" role="group" aria-labelledby="notify-label">
+            {NOTIFY_OPTIONS.map((m) => {
+              const on = notifyMinutes.includes(m);
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  className="chip"
+                  aria-pressed={on}
+                  disabled={!on && notifyMinutes.length >= MAX_NOTIFICATIONS}
+                  onClick={() => setNotifyMinutes(on ? notifyMinutes.filter((x) => x !== m) : [...notifyMinutes, m].sort((a, b) => b - a))}
+                >
+                  {on && <Icon name="check" size={14} strokeWidth={3} />}
+                  {notifyLabel(m)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {notifyMinutes.length > 0 && push !== null && push !== 'on' && (
           <p className="muted" style={{ fontSize: 14, marginTop: -4 }}>
             As notificações ainda não estão ativas neste aparelho.{' '}
             <Link to="/notificacoes" style={{ fontWeight: 800 }}>

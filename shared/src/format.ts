@@ -66,9 +66,17 @@ export function leadShort(minutes: number): string {
   return `${minutes} min`;
 }
 
-/** Texto da opção de notificação: null → "Sem notificação", 0 → "Na hora", 15 → "15 min antes". */
-export function notifyLabel(minutes: number | null): string {
-  if (minutes === null) return 'Sem notificação';
-  if (minutes === 0) return 'Na hora';
-  return `${leadShort(minutes)} antes`;
+/** Texto de uma opção: 0 → "Na hora", 15 → "15 min antes". */
+export function notifyLabel(minutes: number): string {
+  return minutes === 0 ? 'Na hora' : `${leadShort(minutes)} antes`;
+}
+
+/** Resumo de várias notificações: [1440, 60] → "1 dia e 1 hora antes"; [60, 0] → "1 hora antes e na hora". */
+export function notifyListLabel(list: number[]): string {
+  if (list.length === 0) return 'Sem notificação';
+  const before = [...list].filter((m) => m > 0).sort((a, b) => b - a).map(leadShort);
+  const joined = before.length > 1 ? `${before.slice(0, -1).join(', ')} e ${before[before.length - 1]}` : (before[0] ?? '');
+  const text = before.length ? `${joined} antes` : '';
+  if (!list.includes(0)) return text;
+  return text ? `${text} e na hora` : 'Na hora';
 }

@@ -69,8 +69,9 @@ export interface Task {
 export const EVENT_REPEATS = ['once', 'daily', 'weekly', 'monthly', 'yearly'] as const;
 export const eventRepeatSchema = z.enum(EVENT_REPEATS);
 export type EventRepeat = z.infer<typeof eventRepeatSchema>;
-/** Minutos de antecedência da notificação (null = sem notificação). */
-export const NOTIFY_OPTIONS = [null, 0, 5, 15, 30, 60, 120, 1440] as const;
+/** Antecedências oferecidas para notificação, em minutos (0 = na hora). Pode escolher várias. */
+export const NOTIFY_OPTIONS = [1440, 120, 60, 30, 15, 5, 0] as const;
+export const MAX_NOTIFICATIONS = 5;
 
 const eventBase = z.object({
   title,
@@ -81,7 +82,12 @@ const eventBase = z.object({
   color: colorSchema.default('rosa'),
   repeat: eventRepeatSchema.default('once'),
   repeatUntil: dateSchema.nullable().default(null),
-  notifyMinutes: z.number().int().min(0).max(10080).nullable().default(null),
+  /** Antecedências em minutos, sem repetição, da maior para a menor (vazio = sem notificação). */
+  notifyMinutes: z
+    .array(z.number().int().min(0).max(10080))
+    .max(MAX_NOTIFICATIONS, `No máximo ${MAX_NOTIFICATIONS} notificações`)
+    .default([])
+    .transform((l) => [...new Set(l)].sort((a, b) => b - a)),
 });
 /** Fim antes do início significa que o compromisso termina no dia seguinte (ex.: plantão 19:00–01:00). */
 const endDiffersFromStart = (e: { startTime?: string; endTime?: string }) =>
@@ -112,7 +118,7 @@ export interface CalendarEvent {
   color: ColorName;
   repeat: EventRepeat;
   repeatUntil: string | null;
-  notifyMinutes: number | null;
+  notifyMinutes: number[];
 }
 
 /* ---------- Lembretes ---------- */

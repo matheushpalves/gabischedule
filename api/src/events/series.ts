@@ -11,7 +11,7 @@ export interface EventSeries {
   startTime: string;
   repeat: EventRepeat;
   repeatUntil: string | null;
-  notifyMinutes: number | null;
+  notifyMinutes: number[];
 }
 
 const UNIT = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' } as const;
@@ -37,10 +37,9 @@ export function occurrenceDates(s: Pick<EventSeries, 'date' | 'repeat' | 'repeat
   return out;
 }
 
-/** Próximo envio da notificação estritamente depois de `after` (ou null se não há). */
-export function nextNotifyAt(s: EventSeries, after: Date): Date | null {
-  if (s.notifyMinutes === null) return null;
-  const lead = s.notifyMinutes * 60_000;
+/** Próximo envio de UMA antecedência (em minutos), estritamente depois de `after`. */
+function nextForLead(s: EventSeries, minutes: number, after: Date): Date | null {
+  const lead = minutes * 60_000;
   const start = nextOccurrence(
     { date: s.date, time: s.startTime, repeat: s.repeat, intervalHours: null },
     new Date(after.getTime() + lead),
@@ -48,6 +47,22 @@ export function nextNotifyAt(s: EventSeries, after: Date): Date | null {
   if (!start) return null;
   if (s.repeatUntil && todayInSaoPaulo(start) > s.repeatUntil) return null;
   return new Date(start.getTime() - lead);
+}
+
+/** Próximo envio considerando todas as notificações do compromisso (ou null se não há). */
+export function nextNotifyAt(s: EventSeries, after: Date): Date | null {
+  let best: Date | null = null;
+  for (const m of s.notifyMinutes) {
+    const t = nextForLead(s, m, after);
+    if (t && (!best || t < best)) best = t;
+  }
+  return best;
+}
+
+/** Quais antecedências correspondem ao envio marcado para `at` (normalmente uma). */
+export function leadsDueAt(s: EventSeries, at: Date): number[] {
+  const justBefore = new Date(at.getTime() - 1);
+  return s.notifyMinutes.filter((m) => nextForLead(s, m, justBefore)?.getTime() === at.getTime());
 }
 
 interface DueRow {
@@ -59,7 +74,7 @@ interface DueRow {
   end_time: string;
   repeat: EventRepeat;
   repeat_until: string | null;
-  notify_minutes: number;
+  notify_minutes: number[];
   notify_next_at: Date;
 }
 
@@ -71,7 +86,7 @@ export async function dispatchDueEventNotifications(db: Db, log: FastifyBaseLogg
     await client.query('BEGIN');
     const { rows } = await client.query<DueRow>(
       `SELECT id, title, place, date, start_time, end_time, repeat, repeat_until, notify_minutes, notify_next_at
-       FROM events WHERE notify_next_at IS NOT NULL AND notify_next_at <= $1
+       FROM events WHERE notify_next_at IS NOT NULL AND notify_next_at <= $1 AND cardinality(notify_minutes) > 0
        FOR UPDATE SKIP LOCKED`,
       [now],
     );
@@ -86,15 +101,18 @@ export async function dispatchDueEventNotifications(db: Db, log: FastifyBaseLogg
       await client.query('UPDATE events SET notify_next_at = $2 WHERE id = $1', [e.id, nextNotifyAt(series, e.notify_next_at)]);
       // Não dispara avisos muito atrasados (ex.: servidor ficou parado).
       if (now.getTime() - e.notify_next_at.getTime() < 60 * 60 * 1000) {
+        const due = leadsDueAt(series, e.notify_next_at);
+        // Se duas antecedências caem no mesmo instante, manda só a mais próxima do início.
+        const lead = due.length ? Math.min(...due) : Math.min(...e.notify_minutes);
         count += 1;
-        const when = e.notify_minutes === 0 ? 'Começa agora' : `Começa em ${leadShort(e.notify_minutes)}`;
+        const when = lead === 0 ? 'Começa agora' : lead === 1440 ? 'É amanhã' : `Começa em ${leadShort(lead)}`;
         void sendToAll(
           db,
           {
             title: e.title,
             body: `${when} · ${e.start_time}–${e.end_time}${e.place ? ` · ${e.place}` : ''}`,
             url: '/agenda',
-            tag: `event-${e.id}`,
+            tag: `event-${e.id}-${lead}`,
           },
           log,
         );

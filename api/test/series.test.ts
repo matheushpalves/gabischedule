@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { nextNotifyAt, occurrenceDates } from '../src/events/series';
+import { leadsDueAt, nextNotifyAt, occurrenceDates } from '../src/events/series';
+import { notifyListLabel } from '@gabi/shared';
 
 const sp = (local: string) => new Date(`${local}-03:00`);
 
@@ -37,7 +38,7 @@ describe('repetição de compromissos', () => {
 });
 
 describe('notificação antes do compromisso', () => {
-  const plantao = { date: '2026-11-13', startTime: '19:00', repeat: 'weekly' as const, repeatUntil: null, notifyMinutes: 60 };
+  const plantao = { date: '2026-11-13', startTime: '19:00', repeat: 'weekly' as const, repeatUntil: null, notifyMinutes: [60] };
 
   it('1 hora antes, no fuso de São Paulo', () => {
     expect(nextNotifyAt(plantao, sp('2026-11-09T12:00:00'))).toEqual(sp('2026-11-13T18:00:00'));
@@ -48,12 +49,33 @@ describe('notificação antes do compromisso', () => {
   });
 
   it('1 dia antes pode cair no dia anterior', () => {
-    expect(nextNotifyAt({ ...plantao, notifyMinutes: 1440 }, sp('2026-11-09T12:00:00'))).toEqual(sp('2026-11-12T19:00:00'));
+    expect(nextNotifyAt({ ...plantao, notifyMinutes: [1440] }, sp('2026-11-09T12:00:00'))).toEqual(sp('2026-11-12T19:00:00'));
   });
 
   it('sem notificação, ou série encerrada, não agenda nada', () => {
-    expect(nextNotifyAt({ ...plantao, notifyMinutes: null }, sp('2026-11-09T12:00:00'))).toBeNull();
+    expect(nextNotifyAt({ ...plantao, notifyMinutes: [] }, sp('2026-11-09T12:00:00'))).toBeNull();
     expect(nextNotifyAt({ ...plantao, repeatUntil: '2026-11-13' }, sp('2026-11-13T18:00:00'))).toBeNull();
     expect(nextNotifyAt({ ...plantao, repeat: 'once' }, sp('2026-11-13T18:30:00'))).toBeNull();
+  });
+});
+
+describe('várias notificações (1 dia antes e 1 hora antes)', () => {
+  const plantao = { date: '2026-11-13', startTime: '19:00', repeat: 'weekly' as const, repeatUntil: null, notifyMinutes: [1440, 60] };
+
+  it('agenda a mais cedo primeiro e depois a seguinte', () => {
+    const first = nextNotifyAt(plantao, sp('2026-11-09T12:00:00'))!;
+    expect(first).toEqual(sp('2026-11-12T19:00:00'));
+    expect(leadsDueAt(plantao, first)).toEqual([1440]);
+    const second = nextNotifyAt(plantao, first)!;
+    expect(second).toEqual(sp('2026-11-13T18:00:00'));
+    expect(leadsDueAt(plantao, second)).toEqual([60]);
+    expect(nextNotifyAt(plantao, second)).toEqual(sp('2026-11-19T19:00:00')); // próxima semana
+  });
+
+  it('resumo em texto', () => {
+    expect(notifyListLabel([1440, 60])).toBe('1 dia e 1 hora antes');
+    expect(notifyListLabel([60, 15, 0])).toBe('1 hora e 15 min antes e na hora');
+    expect(notifyListLabel([0])).toBe('Na hora');
+    expect(notifyListLabel([])).toBe('Sem notificação');
   });
 });
