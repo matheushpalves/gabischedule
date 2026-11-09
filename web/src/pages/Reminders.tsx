@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { REPEATS, REPEAT_LABELS, repeatLabel, type Reminder, type ReminderCompletion, type ReminderInput, type Repeat } from '@gabi/shared';
 import { del, errorMessage, patch, post } from '../lib/api';
 import { WEEKDAYS_SHORT, addDays, dateOfInstantSP, dayNum, nowTimeSP, relativeDate, shortDate, timeOfInstantSP, todaySP, weekday } from '../lib/date';
-import { useApi, useToday } from '../lib/hooks';
+import { useApi, useLocalState, useToday } from '../lib/hooks';
 import { getPushState, type PushState } from '../lib/pwa';
 import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
@@ -26,9 +26,17 @@ export function RemindersPage() {
   const [push, setPush] = useState<PushState | null>(null);
   const [busy, setBusy] = useState<Set<number>>(new Set());
   const [showAllDone, setShowAllDone] = useState(false);
+  const [doneOpen, setDoneOpen] = useLocalState('gabi:reminders-done-open', false);
 
   useEffect(() => {
     getPushState().then(setPush, () => setPush('unsupported'));
+  }, []);
+
+  // Reavalia a cada minuto: quando chega o próximo horário, o lembrete volta para "Hoje" como pendente.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   const list = reminders.data ?? [];
@@ -44,10 +52,15 @@ export function RemindersPage() {
     const db = display(b);
     return (da.date + da.time).localeCompare(db.date + db.time);
   });
-  const todayList = sorted.filter((r) => display(r).date === today);
-  const later = sorted.filter((r) => display(r).date > today);
-  const ended = sorted.filter((r) => display(r).date < today);
   const doneList = completions.data ?? [];
+  const nowIso = new Date().toISOString();
+  // Concluídos hoje: saem de "Hoje" até o próximo horário chegar (aí voltam como pendentes).
+  const doneTodayIds = new Set(doneList.filter((c) => dateOfInstantSP(c.occurrenceAt) === today).map((c) => c.reminderId));
+  const isPending = (r: Reminder) => r.currentAt !== null && r.currentAt <= nowIso;
+  const inToday = (r: Reminder) => display(r).date === today && (isPending(r) || !doneTodayIds.has(r.id));
+  const todayList = sorted.filter(inToday);
+  const later = sorted.filter((r) => !inToday(r) && display(r).date >= today);
+  const ended = sorted.filter((r) => display(r).date < today);
 
   const setBusyFor = (id: number, on: boolean) =>
     setBusy((b) => {
@@ -72,6 +85,11 @@ export function RemindersPage() {
     setBusyFor(r.id, true);
     try {
       const updated = await post<Reminder>(`/reminders/${r.id}/done`);
+      const now = new Date().toISOString();
+      completions.setData((l) => [
+        { id: -r.id, reminderId: r.id, title: r.title, repeat: r.repeat, intervalHours: r.intervalHours, occurrenceAt: r.currentAt ?? now, doneAt: now },
+        ...(l ?? []),
+      ]);
       reminders.setData((l) => l?.map((x) => (x.id === r.id ? updated : x)));
       toast(r.repeat === 'once' ? 'Feito! Está em Concluídos.' : 'Feito! Volta no próximo horário.');
       void completions.reload();
@@ -94,7 +112,6 @@ export function RemindersPage() {
     }
   };
 
-  const nowIso = new Date().toISOString();
   const row = (r: Reminder, withDay: boolean) => {
     const d = display(r);
     const late = r.currentAt !== null && r.currentAt <= nowIso;
@@ -128,7 +145,13 @@ export function RemindersPage() {
         <button type="button" className="item-main" onClick={() => setEditing(r)} aria-label={`Editar ${r.title}`}>
           <span className="item-title">{r.title}</span>
           <span className="item-sub" style={late ? { color: 'var(--danger)', fontWeight: 700 } : undefined}>
-            {late ? (withDay ? `Pendente · ${shortDate(d.date)} · ` : 'Pendente · ') : withDay ? `${d.time} · ` : ''}
+            {late
+              ? withDay
+                ? `Pendente · ${shortDate(d.date)} · `
+                : 'Pendente · '
+              : withDay
+                ? `${d.date === today ? 'Hoje, ' : ''}${d.time} · `
+                : ''}
             {repeatLabel(r.repeat, r.intervalHours)}
           </span>
         </button>
@@ -141,7 +164,7 @@ export function RemindersPage() {
     const doneDay = relativeDate(dateOfInstantSP(c.doneAt), today);
     return (
       <div key={c.id} className="item task-done">
-        <button type="button" className="check on" aria-label={`Desfazer ${c.title}`} onClick={() => void undo(c)}>
+        <button type="button" className="check on" aria-label={`Desfazer ${c.title}`} onClick={() => void undo(c)} disabled={c.id < 0}>
           <span className="box">
             <Icon name="check" size={14} strokeWidth={3.5} style={{ color: '#fff' }} />
           </span>
@@ -227,25 +250,50 @@ export function RemindersPage() {
           </div>
           <div className="stack" style={{ gap: 22 }}>
             <section className="stack">
-              <h2 className="h2">Próximos dias</h2>
-              {later.length ? later.map((r) => row(r, true)) : <p className="muted">Nenhum lembrete nos próximos dias.</p>}
+              <h2 className="h2">Próximos</h2>
+              {later.length ? later.map((r) => row(r, true)) : <p className="muted">Nenhum lembrete agendado.</p>}
             </section>
-            {doneList.length > 0 && (
-              <section className="stack">
-                <div className="row-between">
-                  <h2 className="h2">Concluídos</h2>
-                  <span className="muted" style={{ fontSize: 13 }}>últimos 30 dias</span>
-                </div>
-                {(showAllDone ? doneList : doneList.slice(0, COMPLETED_PREVIEW)).map(doneRow)}
-                {doneList.length > COMPLETED_PREVIEW && (
-                  <button type="button" className="link-btn" style={{ alignSelf: 'flex-start' }} onClick={() => setShowAllDone(!showAllDone)}>
-                    {showAllDone ? 'Mostrar menos' : `Ver todos (${doneList.length})`}
-                  </button>
-                )}
-              </section>
-            )}
           </div>
         </div>
+      )}
+
+      {doneList.length > 0 && (
+        <section className="stack">
+          <button
+            type="button"
+            className="row-between"
+            aria-expanded={doneOpen}
+            aria-controls="reminders-done"
+            onClick={() => setDoneOpen(!doneOpen)}
+            style={{ background: 'none', border: 'none', padding: 0, minHeight: 44, color: 'inherit', textAlign: 'left' }}
+          >
+            <span className="row" style={{ gap: 8 }}>
+              <span className="h2" role="heading" aria-level={2}>
+                Concluídos
+              </span>
+              <span className="tag" style={{ background: '#FBE3EC', color: '#8E1F4C' }}>
+                {doneList.length}
+              </span>
+            </span>
+            <span className="row muted" style={{ gap: 4, fontSize: 13, fontWeight: 700 }}>
+              {doneOpen ? 'Fechar' : 'Abrir'}
+              <Icon name="chevronDown" size={18} strokeWidth={2.5} style={{ transform: doneOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />
+            </span>
+          </button>
+          {doneOpen && (
+            <div id="reminders-done" className="stack">
+              <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
+                Últimos 30 dias · toque no ✓ para desfazer
+              </p>
+              {(showAllDone ? doneList : doneList.slice(0, COMPLETED_PREVIEW)).map(doneRow)}
+              {doneList.length > COMPLETED_PREVIEW && (
+                <button type="button" className="link-btn" style={{ alignSelf: 'flex-start' }} onClick={() => setShowAllDone(!showAllDone)}>
+                  {showAllDone ? 'Mostrar menos' : `Ver todos (${doneList.length})`}
+                </button>
+              )}
+            </div>
+          )}
+        </section>
       )}
 
       <Fab label="Novo lembrete" onClick={() => setEditing('new')} />
