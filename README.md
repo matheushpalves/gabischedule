@@ -172,7 +172,7 @@ sudo -u postgres pg_restore --clean --if-exists -d gabi /var/backups/gabi/gabi-A
 O workflow `.github/workflows/ci-cd.yml` tem dois jobs:
 
 - **CI**: roda em todo push e em PRs para o `main`: `npm ci`, lint, testes e build. Depois sobe a API contra um Postgres de verdade (migrações, rota protegida responde 401, login e sessão funcionando). Também confere que `AUTH_BASE` não aparece no bundle do frontend.
-- **Deploy**: roda só em push no `main` (ou manualmente em *Actions → CI/CD → Run workflow* com o `main` selecionado), depois que o CI passa. Ele usa o build gerado pelo CI e roda `deploy/deploy.sh` com `SKIP_BUILD=1`. No fim, testa `https://gabischedule.duckdns.org/api/health`.
+- **Deploy**: enquanto os secrets abaixo não existirem, é pulado com um aviso (sem falhar). Depois, roda só em push no `main` (ou manualmente em *Actions → CI/CD → Run workflow* com o `main` selecionado), depois que o CI passa. Ele usa o build gerado pelo CI e roda `deploy/deploy.sh` com `SKIP_BUILD=1`. No fim, testa `https://gabischedule.duckdns.org/api/health`.
 
 ### Configuração (uma vez)
 
