@@ -166,3 +166,42 @@ Restaurar um backup:
 ```bash
 sudo -u postgres pg_restore --clean --if-exists -d gabi /var/backups/gabi/gabi-AAAAMMDD-HHMM.dump
 ```
+
+## CI/CD (GitHub Actions)
+
+O workflow `.github/workflows/ci-cd.yml` tem dois jobs:
+
+- **CI**: roda em todo push e em PRs para o `main`: `npm ci`, lint, testes e build. Depois sobe a API contra um Postgres de verdade (migrações, rota protegida responde 401, login e sessão funcionando). Também confere que `AUTH_BASE` não aparece no bundle do frontend.
+- **Deploy**: roda só em push no `main` (ou manualmente em *Actions → CI/CD → Run workflow* com o `main` selecionado), depois que o CI passa. Ele usa o build gerado pelo CI e roda `deploy/deploy.sh` com `SKIP_BUILD=1`. No fim, testa `https://gabischedule.duckdns.org/api/health`.
+
+### Configuração (uma vez)
+
+1. Gere uma chave só para o deploy, na sua máquina:
+
+```bash
+ssh-keygen -t ed25519 -C "gabi-deploy" -f gabi-deploy -N ""
+```
+
+2. Autorize a chave na VPS (usuário com sudo sem senha; o `root` serve):
+
+```bash
+ssh-copy-id -i gabi-deploy.pub root@gabischedule.duckdns.org
+```
+
+3. Pegue a impressão digital do servidor (vai no secret `VPS_KNOWN_HOSTS`):
+
+```bash
+ssh-keyscan -t ed25519 gabischedule.duckdns.org
+```
+
+4. No GitHub: *Settings → Environments → New environment* chamado **`production`**. Dentro dele, cadastre os secrets:
+
+| Secret | Valor |
+| --- | --- |
+| `VPS_SSH_KEY` | conteúdo do arquivo `gabi-deploy` (a chave **privada**) |
+| `VPS_KNOWN_HOSTS` | a saída do `ssh-keyscan` acima |
+| `VPS_HOST` | `root@gabischedule.duckdns.org` |
+
+Em *Environments → production* também dá para exigir aprovação manual antes de cada deploy (*Required reviewers*), se preferir.
+
+5. A VPS precisa ter passado pela preparação da seção “Deploy na VPS” (Node, Postgres, Caddy, `/etc/gabi/api.env`, serviço systemd).

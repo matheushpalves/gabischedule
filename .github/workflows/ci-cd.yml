@@ -1,0 +1,130 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Em branches de trabalho, um push novo cancela o anterior; no main nunca (para não interromper um deploy).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ci:
+    name: Lint, testes e build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gabi
+          POSTGRES_PASSWORD: gabi
+          POSTGRES_DB: gabi
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+      - name: Frontend não conhece a regra do código
+        run: |
+          if grep -rq "AUTH_BASE" web/dist; then echo "AUTH_BASE apareceu no bundle!"; exit 1; fi
+
+      - name: Teste de fumaça da API (migrações, sessão e login)
+        env:
+          DATABASE_URL: postgres://gabi:gabi@localhost:5432/gabi
+          # Base fictícia, só para o teste (a real fica apenas no .env da VPS).
+          AUTH_BASE: '1000'
+          COOKIE_SECURE: 'false'
+          PORT: '3001'
+        run: |
+          node api/dist/index.js > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs localhost:3001/api/health && break; sleep 1; done
+          curl -fs localhost:3001/api/health
+          status=$(curl -s -o /dev/null -w '%{http_code}' localhost:3001/api/tasks)
+          [ "$status" = 401 ] || { echo "rota protegida respondeu $status"; exit 1; }
+          code=$((1000 + $(TZ=America/Sao_Paulo date +%-d)))
+          curl -fs -c jar -X POST localhost:3001/api/auth/login -H 'content-type: application/json' -d "{\"code\":\"$code\"}"
+          curl -fs -b jar localhost:3001/api/tasks > /dev/null
+          curl -fs -b jar "localhost:3001/api/events?from=2026-01-01&to=2026-01-07" > /dev/null
+          echo "API ok"
+
+      - name: Logs da API
+        if: failure()
+        run: cat api.log || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gabi-build
+          retention-days: 7
+          path: |
+            web/dist
+            api/dist
+            api/migrations
+            api/package.json
+            deploy/backup.sh
+
+  deploy:
+    name: Deploy na VPS
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://gabischedule.duckdns.org
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gabi-build
+          path: .
+
+      - name: Configurar SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          [ -n "$VPS_SSH_KEY" ] || { echo "Secret VPS_SSH_KEY não configurado"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Publicar
+        env:
+          DEPLOY_HOST: ${{ secrets.VPS_HOST }}
+          SKIP_BUILD: '1'
+        run: ./deploy/deploy.sh
+
+      - name: Verificar o site público
+        run: |
+          for i in $(seq 1 10); do
+            curl -fsS https://gabischedule.duckdns.org/api/health && exit 0
+            sleep 3
+          done
+          exit 1

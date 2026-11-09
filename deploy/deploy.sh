@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Faz o build local e publica na VPS.
 #   DEPLOY_HOST=usuario@gabischedule.duckdns.org ./deploy/deploy.sh
+# Também é usado pelo GitHub Actions (.github/workflows/ci-cd.yml) a cada push no main.
 # O usuário remoto precisa de sudo (para gravar em /opt e /var/www e reiniciar o serviço).
 set -euo pipefail
 
@@ -8,12 +9,18 @@ HOST="${DEPLOY_HOST:-root@gabischedule.duckdns.org}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> Instalando dependências e rodando testes"
-npm ci
-npm test
+# No GitHub Actions o build e os testes já rodaram no job de CI: use SKIP_BUILD=1.
+if [ "${SKIP_BUILD:-0}" != "1" ]; then
+  echo "==> Instalando dependências e rodando testes"
+  npm ci
+  npm test
 
-echo "==> Build"
-npm run build
+  echo "==> Build"
+  npm run build
+fi
+for f in web/dist/index.html api/dist/index.js; do
+  [ -f "$f" ] || { echo "Faltando $f — rode o build antes." >&2; exit 1; }
+done
 
 echo "==> Enviando arquivos para $HOST"
 ssh "$HOST" 'mkdir -p ~/gabi-upload/web ~/gabi-upload/api ~/gabi-upload/deploy'
