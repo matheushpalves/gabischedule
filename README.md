@@ -83,7 +83,8 @@ Outros comandos (na raiz):
 | `/api/task-categories[/:id]` | GET, POST, PUT, DELETE |
 | `/api/tasks[/:id]` | GET, POST, PATCH, DELETE |
 | `/api/events?from=&to=` (repetições expandidas) · `/api/events/:id` | GET, POST, PATCH, DELETE |
-| `/api/reminders[/:id]` | GET, POST, PATCH, DELETE |
+| `/api/reminders[/:id]` · `/api/reminders/:id/done` | GET, POST, PATCH, DELETE · POST |
+| `/api/reminder-completions[/:id]` | GET, DELETE (desfazer) |
 | `/api/push/config` · `/subscribe` · `/unsubscribe` · `/test` | GET · POST · POST · POST |
 | `/api/boards[/:id]` | GET, POST, PUT, DELETE |
 | `/api/cards?boardId=` · `/api/cards/:id` · `/api/cards/:id/move` | GET, POST, PATCH, DELETE · POST |
@@ -94,6 +95,7 @@ Outros comandos (na raiz):
 
 ## Lembretes e notificações
 
+- **Feito:** cada lembrete tem um botão de concluir. "Uma vez" sai da lista e vai para **Concluídos**; os repetidos concluem só a ocorrência da vez (a de hoje que já passou, ou a próxima) e voltam no horário seguinte. Concluir antes da hora cancela a notificação daquele horário. Tocar em um concluído desfaz.
 - **Agenda:** compromissos podem repetir (todo dia, toda semana, todo mês, todo ano, com “repetir até” opcional), atravessar a meia-noite (fim antes do início = termina no dia seguinte) e ter notificação antes do início (na hora, 5/15/30 min, 1/2 horas ou 1 dia antes). A API devolve as repetições já expandidas para o intervalo pedido; editar/excluir vale para a série inteira.
 
 - O backend calcula `next_at` (próximo disparo) no fuso de São Paulo; um `node-cron` roda a cada minuto, envia Web Push para todos os aparelhos inscritos e agenda a próxima ocorrência (“uma vez” é desativado depois de disparar). Inscrições expiradas (404/410) são removidas.

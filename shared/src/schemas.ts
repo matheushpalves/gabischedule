@@ -151,6 +151,21 @@ export interface Reminder {
   active: boolean;
   /** Próximo disparo (ISO, UTC) ou null se não há mais disparos. */
   nextAt: string | null;
+  /**
+   * Ocorrência "da vez" (ISO): a de hoje que já passou e ainda não foi concluída, senão a próxima.
+   * É ela que o botão "Feito" conclui. null quando não há o que concluir (ex.: "uma vez" já concluído).
+   */
+  currentAt: string | null;
+}
+
+export interface ReminderCompletion {
+  id: number;
+  reminderId: number;
+  title: string;
+  repeat: Repeat;
+  intervalHours: number | null;
+  occurrenceAt: string;
+  doneAt: string;
 }
 
 export const pushSubscriptionSchema = z.object({
