@@ -66,6 +66,12 @@ export interface Task {
 
 /* ---------- Agenda ---------- */
 
+export const EVENT_REPEATS = ['once', 'daily', 'weekly', 'monthly', 'yearly'] as const;
+export const eventRepeatSchema = z.enum(EVENT_REPEATS);
+export type EventRepeat = z.infer<typeof eventRepeatSchema>;
+/** Minutos de antecedência da notificação (null = sem notificação). */
+export const NOTIFY_OPTIONS = [null, 0, 5, 15, 30, 60, 120, 1440] as const;
+
 const eventBase = z.object({
   title,
   place: z.string().trim().max(120).default(''),
@@ -73,6 +79,9 @@ const eventBase = z.object({
   startTime: timeSchema,
   endTime: timeSchema,
   color: colorSchema.default('rosa'),
+  repeat: eventRepeatSchema.default('once'),
+  repeatUntil: dateSchema.nullable().default(null),
+  notifyMinutes: z.number().int().min(0).max(10080).nullable().default(null),
 });
 /** Fim antes do início significa que o compromisso termina no dia seguinte (ex.: plantão 19:00–01:00). */
 const endDiffersFromStart = (e: { startTime?: string; endTime?: string }) =>
@@ -94,10 +103,16 @@ export interface CalendarEvent {
   id: number;
   title: string;
   place: string;
+  /** Data desta ocorrência (para séries repetidas, cada ocorrência vem com a sua data). */
   date: string;
+  /** Data de início da série (igual a `date` quando não repete). */
+  seriesDate: string;
   startTime: string;
   endTime: string;
   color: ColorName;
+  repeat: EventRepeat;
+  repeatUntil: string | null;
+  notifyMinutes: number | null;
 }
 
 /* ---------- Lembretes ---------- */

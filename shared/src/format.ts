@@ -1,4 +1,4 @@
-import type { ColorName, Repeat } from './schemas';
+import type { ColorName, EventRepeat, Repeat } from './schemas';
 
 export const TIME_ZONE = 'America/Sao_Paulo';
 
@@ -49,4 +49,26 @@ export function parseBRL(text: string): number | null {
 /** Centavos → texto editável ("1234,56"). */
 export function centsToInput(cents: number): string {
   return `${Math.floor(cents / 100)},${(cents % 100).toString().padStart(2, '0')}`;
+}
+
+export const EVENT_REPEAT_LABELS: Record<EventRepeat, string> = {
+  once: 'Não repete',
+  daily: 'Todo dia',
+  weekly: 'Toda semana',
+  monthly: 'Todo mês',
+  yearly: 'Todo ano',
+};
+
+/** Antecedência em texto curto: 5 → "5 min", 60 → "1 hora", 1440 → "1 dia". */
+export function leadShort(minutes: number): string {
+  if (minutes % 1440 === 0) return minutes === 1440 ? '1 dia' : `${minutes / 1440} dias`;
+  if (minutes % 60 === 0) return minutes === 60 ? '1 hora' : `${minutes / 60} horas`;
+  return `${minutes} min`;
+}
+
+/** Texto da opção de notificação: null → "Sem notificação", 0 → "Na hora", 15 → "15 min antes". */
+export function notifyLabel(minutes: number | null): string {
+  if (minutes === null) return 'Sem notificação';
+  if (minutes === 0) return 'Na hora';
+  return `${leadShort(minutes)} antes`;
 }

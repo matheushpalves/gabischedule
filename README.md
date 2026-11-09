@@ -82,7 +82,7 @@ Outros comandos (na raiz):
 | `/api/auth/login` · `/logout` · `/me` | POST · POST · GET |
 | `/api/task-categories[/:id]` | GET, POST, PUT, DELETE |
 | `/api/tasks[/:id]` | GET, POST, PATCH, DELETE |
-| `/api/events?from=&to=` · `/api/events/:id` | GET, POST, PATCH, DELETE |
+| `/api/events?from=&to=` (repetições expandidas) · `/api/events/:id` | GET, POST, PATCH, DELETE |
 | `/api/reminders[/:id]` | GET, POST, PATCH, DELETE |
 | `/api/push/config` · `/subscribe` · `/unsubscribe` · `/test` | GET · POST · POST · POST |
 | `/api/boards[/:id]` | GET, POST, PUT, DELETE |
@@ -93,6 +93,8 @@ Outros comandos (na raiz):
 | `/api/finance/goals[/:id]` | GET, POST, PUT, DELETE |
 
 ## Lembretes e notificações
+
+- **Agenda:** compromissos podem repetir (todo dia, toda semana, todo mês, todo ano, com “repetir até” opcional), atravessar a meia-noite (fim antes do início = termina no dia seguinte) e ter notificação antes do início (na hora, 5/15/30 min, 1/2 horas ou 1 dia antes). A API devolve as repetições já expandidas para o intervalo pedido; editar/excluir vale para a série inteira.
 
 - O backend calcula `next_at` (próximo disparo) no fuso de São Paulo; um `node-cron` roda a cada minuto, envia Web Push para todos os aparelhos inscritos e agenda a próxima ocorrência (“uma vez” é desativado depois de disparar). Inscrições expiradas (404/410) são removidas.
 - **iPhone/iPad:** push só funciona com o app **instalado na Tela de Início** (iOS 16.4+). A tela *Lembretes → Ativar notificações* explica o passo a passo e só habilita o botão quando o app está instalado.

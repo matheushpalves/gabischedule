@@ -1,8 +1,21 @@
-import { useState, type FormEvent } from 'react';
-import { COLOR_STYLES, endsNextDay, type CalendarEvent, type ColorName, type EventInput } from '@gabi/shared';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  COLOR_STYLES,
+  EVENT_REPEATS,
+  EVENT_REPEAT_LABELS,
+  NOTIFY_OPTIONS,
+  endsNextDay,
+  notifyLabel,
+  type CalendarEvent,
+  type ColorName,
+  type EventInput,
+  type EventRepeat,
+} from '@gabi/shared';
 import { del, errorMessage, patch, post } from '../lib/api';
 import { MONTHS, WEEKDAYS, WEEKDAYS_SHORT, addDays, dayNum, monthLabel, monthOf, startOfWeek, todaySP, weekday } from '../lib/date';
 import { useApi, useToday } from '../lib/hooks';
+import { getPushState, type PushState } from '../lib/pwa';
 import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
 import { ColorPicker, Empty, ErrorState, Fab, Field, Loading, SheetActions } from '../components/ui';
@@ -26,13 +39,6 @@ export function AgendaPage() {
   const ofDay = eventsOn(selected);
   const count = ofDay.length;
   const title = `${selected === today ? 'Hoje' : WEEKDAYS[weekday(selected)]}, ${dayNum(selected)} de ${MONTHS[Number(selected.slice(5, 7)) - 1]}`;
-
-  const upsert = (e: CalendarEvent) => {
-    events.setData((l) => {
-      const rest = (l ?? []).filter((x) => x.id !== e.id);
-      return e.date >= addDays(weekStart, -1) && e.date <= weekEnd ? [...rest, e].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)) : rest;
-    });
-  };
 
   return (
     <div className="page">
@@ -96,7 +102,7 @@ export function AgendaPage() {
             const s = COLOR_STYLES[e.color];
             const overnight = endsNextDay(e);
             return (
-              <div key={`${e.id}-${carried ? 'c' : 'o'}`} className="event-row">
+              <div key={`${e.id}-${e.date}-${carried ? 'c' : 'o'}`} className="event-row">
                 <div className="event-time">
                   <span style={{ fontSize: 15, fontWeight: 800 }}>{carried ? '00:00' : e.startTime}</span>
                   <span className="muted" style={{ fontSize: 12 }}>
@@ -120,6 +126,22 @@ export function AgendaPage() {
                       {e.place}
                     </span>
                   )}
+                  {(e.repeat !== 'once' || e.notifyMinutes !== null) && (
+                    <span className="row wrap" style={{ gap: 12, fontSize: 13, color: s.fg }}>
+                      {e.repeat !== 'once' && (
+                        <span className="row" style={{ gap: 6 }}>
+                          <Icon name="repeat" size={14} strokeWidth={2.2} />
+                          {EVENT_REPEAT_LABELS[e.repeat]}
+                        </span>
+                      )}
+                      {e.notifyMinutes !== null && (
+                        <span className="row" style={{ gap: 6 }}>
+                          <Icon name="bell" size={14} strokeWidth={2.2} />
+                          {notifyLabel(e.notifyMinutes)}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </button>
               </div>
             );
@@ -134,8 +156,9 @@ export function AgendaPage() {
           event={editing === 'new' ? null : editing}
           defaultDate={selected}
           onClose={() => setEditing(null)}
-          onSaved={(e) => {
-            upsert(e);
+          onSaved={() => {
+            // Séries repetidas são expandidas no servidor: recarrega a semana.
+            void events.reload();
             setEditing(null);
           }}
           onDeleted={(id) => {
@@ -163,22 +186,45 @@ function EventSheet({
 }) {
   const [title, setTitle] = useState(event?.title ?? '');
   const [place, setPlace] = useState(event?.place ?? '');
-  const [date, setDate] = useState(event?.date ?? defaultDate);
+  // Ao editar uma repetição, o formulário mostra a série (data de início da série).
+  const [date, setDate] = useState(event?.seriesDate ?? defaultDate);
   const [startTime, setStart] = useState(event?.startTime ?? '09:00');
   const [endTime, setEnd] = useState(event?.endTime ?? '10:00');
   const [color, setColor] = useState<ColorName>(event?.color ?? 'rosa');
+  const [repeat, setRepeat] = useState<EventRepeat>(event?.repeat ?? 'once');
+  const [repeatUntil, setRepeatUntil] = useState(event?.repeatUntil ?? '');
+  const [notifyMinutes, setNotifyMinutes] = useState<number | null>(event?.notifyMinutes ?? null);
+  const [push, setPush] = useState<PushState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    getPushState().then(setPush, () => setPush('unsupported'));
+  }, []);
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (repeat !== 'once' && repeatUntil && repeatUntil < date) {
+      setError('A repetição deve terminar depois do início');
+      return;
+    }
     if (endTime === startTime) {
       setError('O fim deve ser diferente do início');
       return;
     }
     setSaving(true);
     setError(null);
-    const body: EventInput = { title, place, date, startTime, endTime, color };
+    const body: EventInput = {
+      title,
+      place,
+      date,
+      startTime,
+      endTime,
+      color,
+      repeat,
+      repeatUntil: repeat !== 'once' && repeatUntil ? repeatUntil : null,
+      notifyMinutes,
+    };
     try {
       onSaved(event ? await patch<CalendarEvent>(`/events/${event.id}`, body) : await post<CalendarEvent>('/events', body));
     } catch (err) {
@@ -208,7 +254,7 @@ function EventSheet({
         <Field label="Local">
           <input className="input" value={place} onChange={(e) => setPlace(e.target.value)} maxLength={120} placeholder="Opcional" />
         </Field>
-        <Field label="Data">
+        <Field label={repeat === 'once' ? 'Data' : 'Começa em'}>
           <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </Field>
         <div className="grid-2">
@@ -224,7 +270,51 @@ function EventSheet({
             Termina no dia seguinte ({dayNum(addDays(date, 1))} de {MONTHS[Number(addDays(date, 1).slice(5, 7)) - 1]}) às {endTime}.
           </p>
         )}
+        <div className="grid-2">
+          <Field label="Repetição">
+            <select className="input" value={repeat} onChange={(e) => setRepeat(e.target.value as EventRepeat)}>
+              {EVENT_REPEATS.map((r) => (
+                <option key={r} value={r}>
+                  {EVENT_REPEAT_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {repeat !== 'once' ? (
+            <Field label="Repetir até (opcional)">
+              <input className="input" type="date" value={repeatUntil} min={date} onChange={(e) => setRepeatUntil(e.target.value)} />
+            </Field>
+          ) : (
+            <span />
+          )}
+        </div>
+        <Field label="Notificação">
+          <select
+            className="input"
+            value={notifyMinutes === null ? '' : String(notifyMinutes)}
+            onChange={(e) => setNotifyMinutes(e.target.value === '' ? null : Number(e.target.value))}
+          >
+            {NOTIFY_OPTIONS.map((m) => (
+              <option key={String(m)} value={m === null ? '' : String(m)}>
+                {notifyLabel(m)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {notifyMinutes !== null && push !== null && push !== 'on' && (
+          <p className="muted" style={{ fontSize: 14, marginTop: -4 }}>
+            As notificações ainda não estão ativas neste aparelho.{' '}
+            <Link to="/notificacoes" style={{ fontWeight: 800 }}>
+              Ativar notificações
+            </Link>
+          </p>
+        )}
         <ColorPicker value={color} onChange={setColor} />
+        {event && event.repeat !== 'once' && (
+          <p className="muted" style={{ fontSize: 14 }}>
+            Alterar ou excluir vale para todas as repetições.
+          </p>
+        )}
         {error && (
           <p className="error-text" role="alert">
             {error}

@@ -4,6 +4,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import type { Config } from '../config';
 import type { Db } from '../db';
 import { nextOccurrence } from './schedule';
+import { dispatchDueEventNotifications } from '../events/series';
 import type { Repeat } from '@gabi/shared';
 
 export function pushEnabled(config: Config): boolean {
@@ -101,5 +102,6 @@ export async function dispatchDueReminders(db: Db, log: FastifyBaseLogger, now =
 export function startReminderCron(db: Db, log: FastifyBaseLogger) {
   return cron.schedule('* * * * *', () => {
     dispatchDueReminders(db, log).catch((err) => log.error({ err }, 'erro no agendador de lembretes'));
+    dispatchDueEventNotifications(db, log).catch((err) => log.error({ err }, 'erro nas notificações da agenda'));
   });
 }
