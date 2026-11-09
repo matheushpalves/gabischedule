@@ -9,8 +9,11 @@ const COLS = `id, title, place, date, start_time AS "startTime", end_time AS "en
 export async function eventRoutes(app: FastifyInstance, { db }: { db: Db }) {
   app.get('/api/events', async (req) => {
     const q = parse(z.object({ from: dateSchema, to: dateSchema }), req.query);
+    // Inclui o dia anterior a `from`: compromissos que atravessam a meia-noite continuam no primeiro dia do intervalo.
     const { rows } = await db.query<CalendarEvent>(
-      `SELECT ${COLS} FROM events WHERE date BETWEEN $1 AND $2 ORDER BY date, start_time, id`,
+      `SELECT ${COLS} FROM events
+       WHERE date BETWEEN $1 AND $2 OR (date = $1::date - 1 AND end_time < start_time)
+       ORDER BY date, start_time, id`,
       [q.from, q.to],
     );
     return rows;
@@ -29,7 +32,7 @@ export async function eventRoutes(app: FastifyInstance, { db }: { db: Db }) {
     const { rows: cur } = await db.query<CalendarEvent>(`SELECT ${COLS} FROM events WHERE id = $1`, [id]);
     const current = cur[0] ?? notFound();
     const merged = { ...current, ...p };
-    if (merged.endTime <= merged.startTime) throw new HttpError(400, 'O fim deve ser depois do início');
+    if (merged.endTime === merged.startTime) throw new HttpError(400, 'O fim deve ser diferente do início');
     const { set, values } = buildUpdate(p, {
       title: 'title', place: 'place', date: 'date', startTime: 'start_time', endTime: 'end_time', color: 'color',
     });

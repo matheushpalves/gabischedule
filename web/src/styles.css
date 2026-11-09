@@ -187,6 +187,9 @@ h1, h2, h3, p { margin: 0; }
 }
 .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(194, 51, 106, 0.18); }
 textarea.input { min-height: 88px; resize: vertical; }
+/* iOS Safari dá largura mínima intrínseca e centraliza o texto de date/time: força caber na coluna. */
+input.input[type='date'], input.input[type='time'] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; display: block; text-align: left; }
+input.input::-webkit-date-and-time-value { text-align: left; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
 .swatch {

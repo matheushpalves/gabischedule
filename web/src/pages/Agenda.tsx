@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { COLOR_STYLES, type CalendarEvent, type ColorName, type EventInput } from '@gabi/shared';
+import { COLOR_STYLES, endsNextDay, type CalendarEvent, type ColorName, type EventInput } from '@gabi/shared';
 import { del, errorMessage, patch, post } from '../lib/api';
 import { MONTHS, WEEKDAYS, WEEKDAYS_SHORT, addDays, dayNum, monthLabel, monthOf, startOfWeek, todaySP, weekday } from '../lib/date';
 import { useApi, useToday } from '../lib/hooks';
@@ -17,14 +17,20 @@ export function AgendaPage() {
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const list = events.data ?? [];
-  const ofDay = list.filter((e) => e.date === selected);
+  /** Compromissos do dia: os que começam nele e os que vieram da noite anterior (atravessam a meia-noite). */
+  const eventsOn = (d: string) => {
+    const carried = list.filter((e) => e.date === addDays(d, -1) && endsNextDay(e)).map((e) => ({ e, carried: true }));
+    const own = list.filter((e) => e.date === d).map((e) => ({ e, carried: false }));
+    return [...carried, ...own];
+  };
+  const ofDay = eventsOn(selected);
   const count = ofDay.length;
   const title = `${selected === today ? 'Hoje' : WEEKDAYS[weekday(selected)]}, ${dayNum(selected)} de ${MONTHS[Number(selected.slice(5, 7)) - 1]}`;
 
   const upsert = (e: CalendarEvent) => {
     events.setData((l) => {
       const rest = (l ?? []).filter((x) => x.id !== e.id);
-      return e.date >= weekStart && e.date <= weekEnd ? [...rest, e].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)) : rest;
+      return e.date >= addDays(weekStart, -1) && e.date <= weekEnd ? [...rest, e].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)) : rest;
     });
   };
 
@@ -52,7 +58,7 @@ export function AgendaPage() {
 
       <div className="week" role="group" aria-label="Dias da semana">
         {days.map((d) => {
-          const has = list.some((e) => e.date === d);
+          const has = eventsOn(d).length > 0;
           const on = d === selected;
           return (
             <button
@@ -86,18 +92,28 @@ export function AgendaPage() {
         <Empty title="Dia livre" text="Nenhum compromisso marcado." />
       ) : (
         <div className="stack-12">
-          {ofDay.map((e) => {
+          {ofDay.map(({ e, carried }) => {
             const s = COLOR_STYLES[e.color];
+            const overnight = endsNextDay(e);
             return (
-              <div key={e.id} className="event-row">
+              <div key={`${e.id}-${carried ? 'c' : 'o'}`} className="event-row">
                 <div className="event-time">
-                  <span style={{ fontSize: 15, fontWeight: 800 }}>{e.startTime}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800 }}>{carried ? '00:00' : e.startTime}</span>
                   <span className="muted" style={{ fontSize: 12 }}>
                     {e.endTime}
+                    {overnight && !carried && (
+                      <sup title="Termina no dia seguinte" aria-label="do dia seguinte">
+                        {' '}
+                        +1
+                      </sup>
+                    )}
                   </span>
                 </div>
                 <button type="button" className="event-card" style={{ background: s.bg }} onClick={() => setEditing(e)} aria-label={`Editar ${e.title}`}>
                   <span style={{ fontSize: 16, fontWeight: 800, color: s.fg }}>{e.title}</span>
+                  {carried && (
+                    <span style={{ fontSize: 13, color: s.fg }}>Continua de ontem · começou às {e.startTime}</span>
+                  )}
                   {e.place && (
                     <span className="row" style={{ gap: 6, fontSize: 13, color: s.fg }}>
                       <Icon name="pin" size={14} strokeWidth={2.2} />
@@ -156,8 +172,8 @@ function EventSheet({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (endTime <= startTime) {
-      setError('O fim deve ser depois do início');
+    if (endTime === startTime) {
+      setError('O fim deve ser diferente do início');
       return;
     }
     setSaving(true);
@@ -203,6 +219,11 @@ function EventSheet({
             <input className="input" type="time" value={endTime} onChange={(e) => setEnd(e.target.value)} required />
           </Field>
         </div>
+        {endTime < startTime && (
+          <p className="muted" style={{ fontSize: 14, marginTop: -4 }} aria-live="polite">
+            Termina no dia seguinte ({dayNum(addDays(date, 1))} de {MONTHS[Number(addDays(date, 1).slice(5, 7)) - 1]}) às {endTime}.
+          </p>
+        )}
         <ColorPicker value={color} onChange={setColor} />
         {error && (
           <p className="error-text" role="alert">

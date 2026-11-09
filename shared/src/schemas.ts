@@ -74,17 +74,22 @@ const eventBase = z.object({
   endTime: timeSchema,
   color: colorSchema.default('rosa'),
 });
-const endAfterStart = (e: { startTime?: string; endTime?: string }) =>
-  !e.startTime || !e.endTime || e.endTime > e.startTime;
-export const eventInputSchema = eventBase.refine(endAfterStart, {
-  message: 'O fim deve ser depois do início',
+/** Fim antes do início significa que o compromisso termina no dia seguinte (ex.: plantão 19:00–01:00). */
+const endDiffersFromStart = (e: { startTime?: string; endTime?: string }) =>
+  !e.startTime || !e.endTime || e.endTime !== e.startTime;
+export const eventInputSchema = eventBase.refine(endDiffersFromStart, {
+  message: 'O fim deve ser diferente do início',
   path: ['endTime'],
 });
 export type EventInput = z.input<typeof eventInputSchema>;
-export const eventPatchSchema = eventBase.partial().refine(endAfterStart, {
-  message: 'O fim deve ser depois do início',
+export const eventPatchSchema = eventBase.partial().refine(endDiffersFromStart, {
+  message: 'O fim deve ser diferente do início',
   path: ['endTime'],
 });
+/** O compromisso atravessa a meia-noite e termina no dia seguinte. */
+export function endsNextDay(e: { startTime: string; endTime: string }): boolean {
+  return e.endTime < e.startTime;
+}
 export interface CalendarEvent {
   id: number;
   title: string;
