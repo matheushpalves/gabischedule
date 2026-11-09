@@ -13,7 +13,7 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().default(''),
   VAPID_PRIVATE_KEY: z.string().default(''),
   VAPID_SUBJECT: z.string().default('mailto:admin@example.com'),
-  /** IPs de proxies confiáveis (Caddy) para ler X-Forwarded-For. */
+  /** IPs de proxies confiáveis (nginx) para ler X-Forwarded-For. */
   TRUST_PROXY: z.string().default('127.0.0.1,::1'),
 });
 

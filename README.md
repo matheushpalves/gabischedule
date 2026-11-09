@@ -5,7 +5,7 @@ PWA pessoal de produtividade da Gabriela: **Tarefas, Agenda, Lembretes (com push
 - **Frontend** (`web/`): React + Vite + TypeScript, React Router, `vite-plugin-pwa` (service worker próprio em `web/src/sw.ts`: shell offline + Web Push), dnd-kit no Kanban.
 - **Backend** (`api/`): Node.js + Fastify + TypeScript, Postgres (`pg`), validação com zod, `node-cron` + `web-push` para os lembretes.
 - **Compartilhado** (`shared/`): schemas zod e tipos usados pelos dois lados, formatação de BRL.
-- **Deploy** (`deploy/`): Caddyfile, unidade systemd, `deploy.sh` e `backup.sh`.
+- **Deploy** (`deploy/`): config do nginx, unidade systemd, `deploy.sh` e `backup.sh`.
 - **Design** (`design/`): telas de referência (`*.dc.html`).
 
 Interface em pt-BR, fuso `America/Sao_Paulo`, moeda BRL (valores guardados em centavos).
@@ -26,7 +26,7 @@ gabi/
 │   ├── components/    Layout (barra inferior / menu lateral), Sheet, Icon, ui, InstallBanner
 │   ├── lib/           api, date (fuso SP), hooks, pwa (instalação + push)
 │   └── sw.ts          service worker
-└── deploy/            Caddyfile, gabi-api.service, deploy.sh, backup.sh
+└── deploy/            nginx-gabischedule.conf, gabi-api.service, deploy.sh, backup.sh
 ```
 
 ## Rodando localmente
@@ -46,7 +46,7 @@ cp api/.env.example api/.env   # ajuste DATABASE_URL, AUTH_BASE e COOKIE_SECURE=
 ```
 
 ```bash
-npm run dev:api    # http://127.0.0.1:3001 (aplica as migrações ao subir)
+npm run dev:api    # http://127.0.0.1:3001 (use PORT=3001 no api/.env de desenvolvimento; aplica as migrações ao subir)
 ```
 
 ```bash
@@ -73,7 +73,7 @@ Outros comandos (na raiz):
 - Comparação em tempo constante (`timingSafeEqual` sobre SHA-256, testando todos os candidatos).
 - Sessão: token aleatório de 256 bits em cookie `httpOnly`, `Secure`, `SameSite=Strict`, 30 dias; no banco só fica o hash. “Sair” revoga a sessão.
 - Todas as rotas `/api/*` exigem sessão, exceto `POST /api/auth/login` (e `/api/health`).
-- 5 erros seguidos por IP → bloqueio de 15 minutos (HTTP 429). Tentativas ficam em `login_attempts`. O IP real vem do `X-Forwarded-For` definido pelo Caddy (só proxies em `TRUST_PROXY` são confiáveis).
+- 5 erros seguidos por IP → bloqueio de 15 minutos (HTTP 429). Tentativas ficam em `login_attempts`. O IP real vem do `X-Forwarded-For` definido pelo nginx (só proxies em `TRUST_PROXY` são confiáveis).
 
 ## API (resumo)
 
@@ -101,22 +101,25 @@ Outros comandos (na raiz):
 
 ## Deploy na VPS (Ubuntu, Hostinger)
 
-Domínio: `gabischedule.duckdns.org` (já apontando para a VPS). Portas **80 e 443** precisam estar abertas para o Caddy emitir o certificado.
+Domínio: `gabischedule.duckdns.org` (precisa apontar para o IPv4 da VPS). A VPS já roda **nginx** em 80/443 para outros sites, então o Gabi entra como mais um `server` no nginx, com certificado via **certbot**. A API escuta em `127.0.0.1:3011` (a 3001 já é usada por outro serviço).
+
+Layout no servidor:
+
+| Caminho | Conteúdo |
+| --- | --- |
+| `/root/gabischedule` | clone do repositório (fora da pasta pública!) |
+| `/var/www/gabi/public` | build do frontend (raiz do nginx) |
+| `/opt/gabi/api` | build da API (serviço `gabi-api`) |
+| `/etc/gabi/api.env` | configuração e segredos (fora do repositório) |
+| `/var/backups/gabi` | backups diários do Postgres |
 
 ### 1. Preparar o servidor (uma vez)
 
-```bash
-sudo apt update && sudo apt install -y postgresql rsync curl debian-keyring debian-archive-keyring apt-transport-https
-```
+Node 22, PostgreSQL, nginx e certbot já estão instalados nesta VPS. Em uma máquina nova:
 
 ```bash
+sudo apt update && sudo apt install -y postgresql rsync curl nginx certbot python3-certbot-nginx
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
-```
-
-```bash
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install -y caddy
 ```
 
 Banco, usuário de sistema e pastas:
@@ -127,22 +130,25 @@ sudo -u postgres psql -c "CREATE USER gabi WITH PASSWORD 'TROQUE_ESTA_SENHA';" -
 
 ```bash
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin gabi
-sudo mkdir -p /etc/gabi /opt/gabi /var/www/gabi
+sudo mkdir -p /etc/gabi /opt/gabi /var/www/gabi/public
 ```
 
 Configuração (fora do repositório):
 
 ```bash
 sudo cp api/.env.example /etc/gabi/api.env   # ou crie o arquivo na mão
-sudo nano /etc/gabi/api.env                  # DATABASE_URL, AUTH_BASE, VAPID_*, VAPID_SUBJECT
+sudo nano /etc/gabi/api.env                  # DATABASE_URL, AUTH_BASE, PORT=3011, VAPID_*, VAPID_SUBJECT
 sudo chown root:gabi /etc/gabi/api.env && sudo chmod 640 /etc/gabi/api.env
 ```
 
-Serviço e Caddy:
+Serviço e nginx:
 
 ```bash
 sudo cp deploy/gabi-api.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable gabi-api
-sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+sudo cp deploy/nginx-gabischedule.conf /etc/nginx/sites-available/gabischedule
+sudo ln -s /etc/nginx/sites-available/gabischedule /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d gabischedule.duckdns.org --redirect   # HTTPS + redirecionamento
 ```
 
 Backup diário (03:15), mantendo os 14 mais recentes em `/var/backups/gabi`:
@@ -153,13 +159,15 @@ echo '15 3 * * * root /opt/gabi/deploy/backup.sh >> /var/log/gabi-backup.log 2>&
 
 ### 2. Publicar (sempre que mudar algo)
 
-Na sua máquina, com acesso SSH à VPS:
+Na própria VPS, dentro do repositório:
 
 ```bash
-DEPLOY_HOST=root@gabischedule.duckdns.org ./deploy/deploy.sh
+cd /root/gabischedule && git pull && ./deploy/deploy.sh
 ```
 
-O script roda os testes, faz o build, envia `web/dist` para `/var/www/gabi` e a API para `/opt/gabi/api` via `rsync`, instala as dependências de produção e reinicia o `gabi-api`. As migrações do banco rodam automaticamente quando a API sobe.
+Ou de outra máquina, com acesso SSH: `DEPLOY_HOST=root@gabischedule.duckdns.org ./deploy/deploy.sh` (é assim que o GitHub Actions publica).
+
+O script roda os testes, faz o build, copia `web/dist` para `/var/www/gabi/public` e a API para `/opt/gabi/api`, instala as dependências de produção e reinicia o `gabi-api`, conferindo o `/api/health` na porta do `/etc/gabi/api.env`. As migrações do banco rodam automaticamente quando a API sobe.
 
 Restaurar um backup:
 
@@ -204,4 +212,4 @@ ssh-keyscan -t ed25519 gabischedule.duckdns.org
 
 Em *Environments → production* também dá para exigir aprovação manual antes de cada deploy (*Required reviewers*), se preferir.
 
-5. A VPS precisa ter passado pela preparação da seção “Deploy na VPS” (Node, Postgres, Caddy, `/etc/gabi/api.env`, serviço systemd).
+5. A VPS precisa ter passado pela preparação da seção “Deploy na VPS” (Node, Postgres, nginx + certbot, `/etc/gabi/api.env`, serviço systemd).
