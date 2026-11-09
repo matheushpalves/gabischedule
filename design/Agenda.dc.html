@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Gabi — Agenda</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#C2336A}a:hover{color:#8E1F4C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFF5F7; font-family: Nunito, system-ui, sans-serif; color: #4A1F3D; box-sizing: border-box">
+<div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 56px 22px 120px 22px; display: flex; flex-direction: column; gap: 22px">
+
+<div style="display: flex; justify-content: space-between; align-items: center">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7A5468">Novembro 2026</p>
+<h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.1">Agenda</h1>
+</div>
+<div style="display: flex; gap: 6px">
+<button aria-label="Semana anterior" style="width: 44px; height: 44px; border-radius: 22px; border: 1.5px solid #EBC3D2; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A1F3D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+<button aria-label="Próxima semana" style="width: 44px; height: 44px; border-radius: 22px; border: 1.5px solid #EBC3D2; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A1F3D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+<button onClick="{{d.pick}}" aria-label="{{d.label}}" style="min-height: 72px; border-radius: 18px; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: Nunito, sans-serif; background: {{d.bg}}; color: {{d.fg}}">
+<span style="font-size: 12px; font-weight: 700">{{d.wd}}</span>
+<span style="font-size: 18px; font-weight: 800">{{d.n}}</span>
+<span style="width: 6px; height: 6px; border-radius: 3px; background: {{d.dot}}"></span>
+</button>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 20px; font-weight: 600">{{dayTitle}}</h2>
+<p style="margin: 0; font-size: 14px; color: #7A5468">{{countLabel}}</p>
+</div>
+
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border-radius: 20px; padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#C2336A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg>
+<p style="margin: 0; font-size: 16px; font-weight: 700">Dia livre</p>
+<p style="margin: 0; font-size: 14px; color: #7A5468">Nenhum compromisso marcado.</p>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{events}}" as="e" hint-placeholder-count="3">
+<div style="display: flex; gap: 12px; align-items: stretch">
+<div style="width: 52px; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; padding-top: 14px; gap: 2px">
+<span style="font-size: 15px; font-weight: 800">{{e.start}}</span>
+<span style="font-size: 12px; color: #7A5468">{{e.end}}</span>
+</div>
+<div style="flex-grow: 1; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; background: {{e.bg}}">
+<p style="margin: 0; font-size: 16px; font-weight: 800; color: {{e.fg}}">{{e.title}}</p>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: {{e.fg}}">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.3-6-11a6 6 0 0 1 12 0c0 5.7-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
+<span>{{e.place}}</span>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+
+</div>
+
+<button aria-label="Novo compromisso" style="position: absolute; right: 22px; bottom: 100px; width: 60px; height: 60px; border-radius: 30px; border: none; background: #C2336A; box-shadow: 0 8px 20px rgba(194,51,106,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<nav aria-label="Navegação principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-radius: 26px 26px 0 0; box-shadow: 0 -4px 20px rgba(122,40,80,0.08); display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px; box-sizing: border-box">
+<a href="Main.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tarefas</a>
+<a href="Agenda.dc.html" aria-current="page" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #C2336A; font-size: 12px; font-weight: 800">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Agenda</a>
+<a href="Lembretes.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Lembretes</a>
+<a href="Kanban.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v11"/></svg>Kanban</a>
+<a href="Financas.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M2 10h20"/><path d="M16 15h2"/><path d="M6 6l9-3 1 3"/></svg>Finanças</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 7 };
+  }
+  renderVals() {
+    var self = this;
+    var styles = {
+      rosa: { bg: '#FBE3EC', fg: '#8E1F4C' },
+      lilas: { bg: '#ECE4FA', fg: '#4F2C8A' },
+      verde: { bg: '#DFF3EA', fg: '#1F6B4A' },
+      pessego: { bg: '#FDECD9', fg: '#8A4A12' }
+    };
+    var data = {
+      2: [{ start: '09:00', end: '10:00', title: 'Reunião de equipe', place: 'Online', c: 'lilas' }],
+      3: [{ start: '19:00', end: '20:00', title: 'Aula de inglês', place: 'Escola', c: 'pessego' }],
+      4: [],
+      5: [{ start: '12:30', end: '13:30', title: 'Almoço com a Ana', place: 'Restaurante', c: 'rosa' }],
+      6: [{ start: '18:30', end: '19:30', title: 'Pilates', place: 'Studio', c: 'verde' }],
+      7: [
+        { start: '10:00', end: '11:00', title: 'Café com as amigas', place: 'Padaria', c: 'rosa' },
+        { start: '15:00', end: '16:30', title: 'Manicure', place: 'Salão', c: 'pessego' },
+        { start: '20:00', end: '22:30', title: 'Jantar a dois', place: 'Restaurante', c: 'lilas' }
+      ],
+      8: [{ start: '13:00', end: '17:00', title: 'Almoço de família', place: 'Casa da mãe', c: 'verde' }]
+    };
+    var wds = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    var full = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    var sel = this.state.sel;
+    var days = wds.map(function (wd, i) {
+      var n = i + 2;
+      var on = n === sel;
+      var has = data[n].length > 0;
+      return {
+        wd: wd, n: n, label: full[i] + ', ' + n + ' de novembro',
+        bg: on ? '#C2336A' : '#FFFFFF',
+        fg: on ? '#FFFFFF' : '#4A1F3D',
+        dot: has ? (on ? '#FFFFFF' : '#C2336A') : 'transparent',
+        pick: function () { self.setState({ sel: n }); }
+      };
+    });
+    var events = data[sel].map(function (e) {
+      var s = styles[e.c];
+      return Object.assign({}, e, { bg: s.bg, fg: s.fg });
+    });
+    var count = events.length;
+    return {
+      days: days,
+      events: events,
+      empty: count === 0,
+      dayTitle: (sel === 7 ? 'Hoje, ' : full[sel - 2] + ', ') + sel + ' de novembro',
+      countLabel: count === 0 ? 'Sem compromissos' : count + (count === 1 ? ' compromisso' : ' compromissos')
+    };
+  }
+}
+</script>
+</body>
+</html>

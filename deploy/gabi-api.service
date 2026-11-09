@@ -1,0 +1,31 @@
+# /etc/systemd/system/gabi-api.service
+[Unit]
+Description=Gabi API (Fastify)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=gabi
+Group=gabi
+WorkingDirectory=/opt/gabi/api
+# Segredos ficam fora do repositório, legíveis só por root e pelo usuário gabi.
+EnvironmentFile=/etc/gabi/api.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=3
+
+# Endurecimento
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadOnlyPaths=/opt/gabi
+
+[Install]
+WantedBy=multi-user.target

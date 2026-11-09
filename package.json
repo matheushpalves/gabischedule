@@ -1,0 +1,30 @@
+{
+  "name": "gabi",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "shared",
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w api",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w api && npm run build -w web",
+    "test": "npm test -w api",
+    "lint": "eslint . && npm run typecheck -w shared && npm run typecheck -w api && npm run typecheck -w web",
+    "migrate": "npm run migrate -w api",
+    "vapid": "npm run vapid -w api"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
+    "typescript-eslint": "^8.72.1"
+  }
+}

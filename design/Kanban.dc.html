@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Gabi — Kanban</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#C2336A}a:hover{color:#8E1F4C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFF5F7; font-family: Nunito, system-ui, sans-serif; color: #4A1F3D; box-sizing: border-box">
+<div style="height: 844px; box-sizing: border-box; padding: 56px 0 96px 0; display: flex; flex-direction: column; gap: 18px">
+
+<div style="padding: 0 22px; display: flex; justify-content: space-between; align-items: flex-end">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7A5468">Projeto</p>
+<h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.1">Kanban</h1>
+</div>
+<button style="min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1.5px solid #EBC3D2; background: #FFFFFF; color: #4A1F3D; font: 700 14px Nunito, sans-serif; display: flex; align-items: center; gap: 6px; cursor: pointer">
+Casa nova
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A1F3D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; overflow-x: auto; display: flex; gap: 14px; padding: 0 22px 8px 22px; box-sizing: border-box">
+<sc-for list="{{columns}}" as="col" hint-placeholder-count="3">
+<div style="width: 272px; flex-shrink: 0; border-radius: 24px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; background: {{col.bg}}">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: {{col.dot}}"></span>
+<h2 style="margin: 0; font-size: 16px; font-weight: 800">{{col.name}}</h2>
+</div>
+<span style="min-width: 26px; height: 26px; border-radius: 13px; background: #FFFFFF; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center">{{col.count}}</span>
+</div>
+<sc-for list="{{col.cards}}" as="c" hint-placeholder-count="2">
+<div style="background: #FFFFFF; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(122,40,80,0.08)">
+<span style="align-self: flex-start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; background: {{c.tagBg}}; color: {{c.tagFg}}">{{c.tag}}</span>
+<p style="margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35">{{c.title}}</p>
+<div style="display: flex; justify-content: space-between; align-items: center">
+<div style="display: flex; align-items: center; gap: 5px; font-size: 13px; color: #7A5468">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+<span>{{c.due}}</span>
+</div>
+<sc-if value="{{c.canMove}}" hint-placeholder-val="{{ true }}">
+<button onClick="{{c.move}}" aria-label="Mover para {{c.nextName}}" style="min-height: 36px; padding: 0 12px; border-radius: 18px; border: none; background: #FBE3EC; color: #8E1F4C; font: 800 12px Nunito, sans-serif; display: flex; align-items: center; gap: 4px; cursor: pointer">
+{{c.nextName}}
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+</button>
+</sc-if>
+<sc-if value="{{c.isDone}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: #1F6B4A">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+Feito
+</span>
+</sc-if>
+</div>
+</div>
+</sc-for>
+<button style="min-height: 44px; border-radius: 16px; border: 1.5px dashed #D9A9BC; background: transparent; color: #7A5468; font: 700 14px Nunito, sans-serif; cursor: pointer">+ Adicionar cartão</button>
+</div>
+</sc-for>
+</div>
+
+</div>
+
+<nav aria-label="Navegação principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-radius: 26px 26px 0 0; box-shadow: 0 -4px 20px rgba(122,40,80,0.08); display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px; box-sizing: border-box">
+<a href="Main.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tarefas</a>
+<a href="Agenda.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Agenda</a>
+<a href="Lembretes.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Lembretes</a>
+<a href="Kanban.dc.html" aria-current="page" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #C2336A; font-size: 12px; font-weight: 800">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v11"/></svg>Kanban</a>
+<a href="Financas.dc.html" style="min-width: 60px; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #7A5468; font-size: 12px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M2 10h20"/><path d="M16 15h2"/><path d="M6 6l9-3 1 3"/></svg>Finanças</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      cards: [
+        { id: 1, col: 0, title: 'Escolher cor da parede do quarto', tag: 'Decoração', due: '10 nov' },
+        { id: 2, col: 0, title: 'Pesquisar preço de cortinas', tag: 'Compras', due: '12 nov' },
+        { id: 3, col: 0, title: 'Organizar o closet', tag: 'Organização', due: '15 nov' },
+        { id: 4, col: 1, title: 'Montar a estante da sala', tag: 'Decoração', due: '8 nov' },
+        { id: 5, col: 1, title: 'Comprar plantas para a varanda', tag: 'Compras', due: '9 nov' },
+        { id: 6, col: 2, title: 'Instalar a internet', tag: 'Organização', due: '3 nov' }
+      ]
+    };
+  }
+  renderVals() {
+    var self = this;
+    var names = ['A fazer', 'Fazendo', 'Feito'];
+    var colStyle = [
+      { bg: '#FBE9EF', dot: '#C2336A' },
+      { bg: '#F1EAFB', dot: '#6B44B0' },
+      { bg: '#E6F4ED', dot: '#2E8A60' }
+    ];
+    var tags = {
+      'Decoração': { bg: '#FBE3EC', fg: '#8E1F4C' },
+      'Compras': { bg: '#FDECD9', fg: '#8A4A12' },
+      'Organização': { bg: '#ECE4FA', fg: '#4F2C8A' }
+    };
+    var columns = names.map(function (name, i) {
+      var cards = self.state.cards.filter(function (c) { return c.col === i; }).map(function (c) {
+        var t = tags[c.tag];
+        return Object.assign({}, c, {
+          tagBg: t.bg, tagFg: t.fg,
+          canMove: i < 2, isDone: i === 2,
+          nextName: i < 2 ? names[i + 1] : '',
+          move: function () {
+            self.setState({ cards: self.state.cards.map(function (x) { return x.id === c.id ? Object.assign({}, x, { col: Math.min(2, x.col + 1) }) : x; }) });
+          }
+        });
+      });
+      return { name: name, bg: colStyle[i].bg, dot: colStyle[i].dot, cards: cards, count: cards.length };
+    });
+    return { columns: columns };
+  }
+}
+</script>
+</body>
+</html>
