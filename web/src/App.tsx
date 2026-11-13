@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { api, post, UNAUTHORIZED_EVENT } from './lib/api';
 import { Layout } from './components/Layout';
+import { ThemeProvider } from './lib/theme';
 import { Loading } from './components/ui';
 import { Login } from './pages/Login';
 import { TasksPage } from './pages/Tasks';
@@ -45,6 +46,7 @@ export function App() {
   if (auth === 'out') return <Login onSuccess={() => setAuth('in')} />;
 
   return (
+    <ThemeProvider>
     <Routes>
       <Route element={<Layout onLogout={() => void logout()} />}>
         <Route index element={<TasksPage />} />
@@ -57,5 +59,6 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </ThemeProvider>
   );
 }

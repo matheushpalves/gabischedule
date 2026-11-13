@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "tsx scripts/gen-icons.mts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

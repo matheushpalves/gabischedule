@@ -116,10 +116,10 @@ export function RemindersPage() {
     const d = display(r);
     const late = r.currentAt !== null && r.currentAt <= nowIso;
     const chip = !r.active && !late
-      ? { background: '#F1EAEE', color: '#6E5563' }
+      ? { background: 'var(--chip-off-bg)', color: 'var(--chip-off-fg)' }
       : late
-        ? { background: '#C2336A', color: '#FFFFFF' }
-        : { background: '#FBE3EC', color: '#8E1F4C' };
+        ? { background: 'var(--accent)', color: '#FFFFFF' }
+        : { background: 'var(--accent-soft)', color: 'var(--accent-dark)' };
     const canDone = r.currentAt !== null;
     return (
       <div key={r.id} className="item" style={{ padding: '12px 12px 12px 6px', gap: 8 }}>
@@ -194,7 +194,7 @@ export function RemindersPage() {
         <div className="stack-4" style={{ gap: 2, minWidth: 0 }}>
           {next ? (
             <>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#F9D5E1' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--on-dark-soft)' }}>
                 Próximo lembrete · {dateOfInstantSP(next.nextAt!) === today ? '' : `${relativeDate(dateOfInstantSP(next.nextAt!), today)}, `}
                 {timeOfInstantSP(next.nextAt!)}
               </p>
@@ -202,7 +202,7 @@ export function RemindersPage() {
             </>
           ) : (
             <>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#F9D5E1' }}>Próximo lembrete</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--on-dark-soft)' }}>Próximo lembrete</p>
               <p style={{ fontSize: 17, fontWeight: 800 }}>Nenhum agendado</p>
             </>
           )}
@@ -271,7 +271,7 @@ export function RemindersPage() {
               <span className="h2" role="heading" aria-level={2}>
                 Concluídos
               </span>
-              <span className="tag" style={{ background: '#FBE3EC', color: '#8E1F4C' }}>
+              <span className="tag" style={{ background: 'var(--accent-soft)', color: 'var(--accent-dark)' }}>
                 {doneList.length}
               </span>
             </span>

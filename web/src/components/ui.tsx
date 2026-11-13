@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { COLORS, COLOR_STYLES, type ColorName } from '@gabi/shared';
 import { Icon, type IconName } from './Icon';
+import { useTheme } from '../lib/theme';
 
 /* ---------- Estados de carregando / vazio / erro ---------- */
 
@@ -64,6 +65,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function ColorPicker({ value, onChange, label = 'Cor' }: { value: ColorName; onChange: (c: ColorName) => void; label?: string }) {
   const id = useId();
+  const { theme } = useTheme();
   return (
     <div className="field">
       <span className="label" id={id}>
@@ -76,7 +78,7 @@ export function ColorPicker({ value, onChange, label = 'Cor' }: { value: ColorNa
             type="button"
             role="radio"
             aria-checked={value === c}
-            aria-label={COLOR_STYLES[c].label}
+            aria-label={theme.tagLabels[c]}
             className="swatch"
             style={{ background: COLOR_STYLES[c].bg, color: COLOR_STYLES[c].fg }}
             onClick={() => onChange(c)}

@@ -10,6 +10,7 @@ import { eventRoutes } from './routes/events';
 import { reminderRoutes } from './routes/reminders';
 import { kanbanRoutes } from './routes/kanban';
 import { financeRoutes } from './routes/finance';
+import { manifestRoute, settingsRoutes } from './routes/settings';
 
 export interface AppDeps {
   config: Pick<Config, 'AUTH_BASE' | 'COOKIE_SECURE' | 'TRUST_PROXY'> & Partial<Config>;
@@ -38,6 +39,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.get('/api/health', async () => ({ ok: true }));
+  if (deps.db) await app.register(manifestRoute, { db: deps.db });
 
   // Tudo abaixo exige sessão válida.
   await app.register(async (secured) => {
@@ -50,6 +52,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await secured.register(reminderRoutes, { db, config });
       await secured.register(kanbanRoutes, { db });
       await secured.register(financeRoutes, { db });
+      await secured.register(settingsRoutes, { db });
     }
     // Qualquer outra rota /api/* (com sessão) → 404 em JSON.
     secured.all('/api/*', async (_req, reply) => reply.code(404).send({ error: 'Não encontrado' }));

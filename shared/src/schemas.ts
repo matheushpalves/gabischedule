@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { THEME_IDS } from './themes';
 
 /* ---------- Primitivos ---------- */
 
@@ -264,3 +265,10 @@ export interface FinanceSummary {
   balanceCents: number;
   budgets: BudgetLine[];
 }
+
+/* ---------- Configurações ---------- */
+
+export const settingsSchema = z.object({
+  theme: z.enum(THEME_IDS),
+});
+export type Settings = z.infer<typeof settingsSchema>;

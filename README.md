@@ -61,7 +61,7 @@ Outros comandos (na raiz):
 | `npm run lint` | ESLint + `tsc --noEmit` em shared, api e web |
 | `npm run build` | Build da API (`api/dist`) e do PWA (`web/dist`) |
 | `npm run vapid -w api` | Gera um par de chaves VAPID para o `.env` |
-| `npm run icons -w web` | Regera os ícones PNG (precisa do Playwright) |
+| `npm run icons -w web` | Regera os ícones PNG de todos os temas (precisa do Playwright) |
 
 > Em `http://localhost` o Chrome aceita cookie `Secure`; no Safari use `COOKIE_SECURE=false` no `.env` de desenvolvimento.
 
@@ -85,6 +85,8 @@ Outros comandos (na raiz):
 | `/api/events?from=&to=` (repetições expandidas) · `/api/events/:id` | GET, POST, PATCH, DELETE |
 | `/api/reminders[/:id]` · `/api/reminders/:id/done` | GET, POST, PATCH, DELETE · POST |
 | `/api/reminder-completions[/:id]` | GET, DELETE (desfazer) |
+| `/api/settings` | GET, PUT (tema) |
+| `/api/manifest.webmanifest` | GET (público: manifest do PWA conforme o tema) |
 | `/api/push/config` · `/subscribe` · `/unsubscribe` · `/test` | GET · POST · POST · POST |
 | `/api/boards[/:id]` | GET, POST, PUT, DELETE |
 | `/api/cards?boardId=` · `/api/cards/:id` · `/api/cards/:id/move` | GET, POST, PATCH, DELETE · POST |
@@ -92,6 +94,14 @@ Outros comandos (na raiz):
 | `/api/finance/transactions?month=` · `/:id` | GET, POST, PATCH, DELETE |
 | `/api/finance/summary?month=YYYY-MM` | GET |
 | `/api/finance/goals[/:id]` | GET, POST, PUT, DELETE |
+
+## Temas de cor
+
+Em **Ajustes → Aparência** dá para escolher entre 5 temas: Rosa (original), Rosé, Rosé gold, Terracota + musgo e Cereja + marrom. A escolha fica salva no servidor (`settings`), então vale para todos os aparelhos.
+
+- As cores de cada tema ficam em `shared/src/themes.ts` e viram variáveis CSS (`--accent`, `--ink`, `--tag-rosa-bg`...). O teste `api/test/themes.test.ts` garante contraste AA em todos os textos de todos os temas.
+- O manifest do PWA é gerado pela API (`/api/manifest.webmanifest`, rota pública) com o ícone e as cores do tema escolhido. Os ícones de cada tema ficam em `web/public/icons/` (`npm run icons -w web` regera).
+- Ícone do app instalado: no Android e no computador ele se atualiza sozinho (em até ~1 dia). No iPhone, o ícone da Tela de Início é fixado quando o app é adicionado; para trocar, é preciso remover e adicionar de novo pelo Safari.
 
 ## Lembretes e notificações
 

@@ -24,9 +24,9 @@ import { Sheet } from '../components/Sheet';
 import { ColorPicker, Empty, ErrorState, Field, Loading, SheetActions, toast } from '../components/ui';
 
 const COL_STYLE = [
-  { bg: '#FBE9EF', dot: '#C2336A' },
-  { bg: '#F1EAFB', dot: '#6B44B0' },
-  { bg: '#E6F4ED', dot: '#2E8A60' },
+  { bg: 'var(--col0-bg)', dot: 'var(--col0-dot)' },
+  { bg: 'var(--col1-bg)', dot: 'var(--col1-dot)' },
+  { bg: 'var(--col2-bg)', dot: 'var(--col2-dot)' },
 ];
 
 /** Alvo sob o dedo/ponteiro (cartão tem prioridade sobre a coluna); no teclado, sobreposição de retângulos. */
@@ -321,7 +321,7 @@ function CardBody({
         {card.title}
       </button>
       <div className="row-between">
-        <div className="row" style={{ gap: 5, fontSize: 13, color: late ? 'var(--danger)' : 'var(--ink-2)', fontWeight: late ? 700 : 400 }}>
+        <div className="row" style={{ gap: 5, fontSize: 13, color: late ? 'var(--danger)' : 'var(--ink2)', fontWeight: late ? 700 : 400 }}>
           {card.dueDate && (
             <>
               <Icon name="calendar" size={14} strokeWidth={2.2} />

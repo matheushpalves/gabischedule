@@ -82,20 +82,20 @@ export function FinancePage() {
             ) : (
               <>
                 <div className="stack-4">
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#F9D5E1' }}>Saldo do mês</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--on-dark-soft)' }}>Saldo do mês</p>
                   <p style={{ fontFamily: 'var(--serif)', fontSize: 36, fontWeight: 600, lineHeight: 1.1 }}>
                     {summary.data ? brl(summary.data.balanceCents) : '…'}
                   </p>
                 </div>
                 <div className="grid-2" style={{ gap: 10 }}>
                   <div className="mini">
-                    <div className="row" style={{ gap: 6, fontSize: 13, fontWeight: 700, color: '#BFEBD6' }}>
+                    <div className="row" style={{ gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--income-label)' }}>
                       <Icon name="arrowUp" size={14} strokeWidth={2.5} /> Entradas
                     </div>
                     <p style={{ fontSize: 17, fontWeight: 800 }}>{summary.data ? brl(summary.data.incomeCents) : '…'}</p>
                   </div>
                   <div className="mini">
-                    <div className="row" style={{ gap: 6, fontSize: 13, fontWeight: 700, color: '#F9D5E1' }}>
+                    <div className="row" style={{ gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--on-dark-soft)' }}>
                       <Icon name="arrowDown" size={14} strokeWidth={2.5} /> Saídas
                     </div>
                     <p style={{ fontSize: 17, fontWeight: 800 }}>{summary.data ? brl(summary.data.expenseCents) : '…'}</p>
@@ -118,7 +118,7 @@ export function FinancePage() {
                   <button key={g.id} type="button" className="card stack-12" style={{ border: 'none', textAlign: 'left' }} onClick={() => setEditingGoal(g)} aria-label={`Editar meta ${g.name}`}>
                     <div className="row-between">
                       <div className="row" style={{ gap: 10, minWidth: 0 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 14, background: '#ECE4FA', color: '#4F2C8A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 14, background: 'var(--goal-icon-bg)', color: 'var(--goal-fg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Icon name="plane" size={20} />
                         </div>
                         <div className="stack-4" style={{ gap: 2, minWidth: 0 }}>
@@ -128,10 +128,10 @@ export function FinancePage() {
                           </span>
                         </div>
                       </div>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: '#4F2C8A' }}>{pct}%</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--goal-fg)' }}>{pct}%</span>
                     </div>
-                    <div className="bar" style={{ background: '#F1EAFB' }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Progresso da meta ${g.name}`}>
-                      <span style={{ width: `${pct}%`, background: '#6B44B0' }} />
+                    <div className="bar" style={{ background: 'var(--goal-track)' }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Progresso da meta ${g.name}`}>
+                      <span style={{ width: `${pct}%`, background: 'var(--goal-bar)' }} />
                     </div>
                   </button>
                 );
@@ -168,8 +168,8 @@ export function FinancePage() {
                           <strong style={{ color: warn ? 'var(--danger)' : 'var(--ink)' }}>{brl(b.spentCents)}</strong> de {brl(b.limitCents)}
                         </p>
                       </div>
-                      <div className="bar" style={{ height: 8, background: '#F6E6EC' }} role="progressbar" aria-valuenow={Math.round(ratio * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`Orçamento de ${b.name}`}>
-                        <span style={{ width: `${pct}%`, background: warn ? '#C2336A' : '#E89AB6' }} />
+                      <div className="bar" style={{ height: 8, background: 'var(--line-soft)' }} role="progressbar" aria-valuenow={Math.round(ratio * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`Orçamento de ${b.name}`}>
+                        <span style={{ width: `${pct}%`, background: warn ? 'var(--accent)' : 'var(--bar-soft)' }} />
                       </div>
                     </div>
                   );

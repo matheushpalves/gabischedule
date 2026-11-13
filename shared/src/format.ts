@@ -2,12 +2,13 @@ import type { ColorName, EventRepeat, Repeat } from './schemas';
 
 export const TIME_ZONE = 'America/Sao_Paulo';
 
+/** Cores das etiquetas: variáveis CSS do tema ativo (o nome visível vem de `theme.tagLabels`). */
 export const COLOR_STYLES: Record<ColorName, { bg: string; fg: string; label: string }> = {
-  rosa: { bg: '#FBE3EC', fg: '#8E1F4C', label: 'Rosa' },
-  lilas: { bg: '#ECE4FA', fg: '#4F2C8A', label: 'Lilás' },
-  verde: { bg: '#DFF3EA', fg: '#1F6B4A', label: 'Verde' },
-  pessego: { bg: '#FDECD9', fg: '#8A4A12', label: 'Pêssego' },
-  azul: { bg: '#E3EEF9', fg: '#1F4E7A', label: 'Azul' },
+  rosa: { bg: 'var(--tag-rosa-bg)', fg: 'var(--tag-rosa-fg)', label: 'Rosa' },
+  lilas: { bg: 'var(--tag-lilas-bg)', fg: 'var(--tag-lilas-fg)', label: 'Lilás' },
+  verde: { bg: 'var(--tag-verde-bg)', fg: 'var(--tag-verde-fg)', label: 'Verde' },
+  pessego: { bg: 'var(--tag-pessego-bg)', fg: 'var(--tag-pessego-fg)', label: 'Pêssego' },
+  azul: { bg: 'var(--tag-azul-bg)', fg: 'var(--tag-azul-fg)', label: 'Azul' },
 };
 
 export const REPEAT_LABELS: Record<Repeat, string> = {
