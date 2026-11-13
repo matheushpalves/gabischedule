@@ -48,4 +48,10 @@ describe('ocorrência da vez (botão "Feito")', () => {
     const r = { ...vitaminas, active: false, nextAt: sp('2026-11-10T08:00:00') };
     expect(currentOccurrence(r, new Set(), now)).toEqual(sp('2026-11-10T08:00:00'));
   });
+
+  it('pausado há dias: mostra o próximo horário a partir de agora, não o antigo', () => {
+    const agua = { date: '2026-11-10', time: '08:00', repeat: 'hourly' as const, intervalHours: 1, active: false };
+    const r = { ...agua, nextAt: sp('2026-11-10T09:00:00') }; // next_at parado desde que foi pausado
+    expect(currentOccurrence(r, new Set(), sp('2026-11-13T15:20:00'))).toEqual(sp('2026-11-13T16:00:00'));
+  });
 });

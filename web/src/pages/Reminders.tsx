@@ -56,7 +56,7 @@ export function RemindersPage() {
   const nowIso = new Date().toISOString();
   // Concluídos hoje: saem de "Hoje" até o próximo horário chegar (aí voltam como pendentes).
   const doneTodayIds = new Set(doneList.filter((c) => dateOfInstantSP(c.occurrenceAt) === today).map((c) => c.reminderId));
-  const isPending = (r: Reminder) => r.currentAt !== null && r.currentAt <= nowIso;
+  const isPending = (r: Reminder) => !(r.repeat !== 'once' && !r.active) && r.currentAt !== null && r.currentAt <= nowIso;
   const inToday = (r: Reminder) => display(r).date === today && (isPending(r) || !doneTodayIds.has(r.id));
   const todayList = sorted.filter(inToday);
   const later = sorted.filter((r) => !inToday(r) && display(r).date >= today);
@@ -69,17 +69,6 @@ export function RemindersPage() {
       else n.delete(id);
       return n;
     });
-
-  const toggle = async (r: Reminder) => {
-    reminders.setData((l) => l?.map((x) => (x.id === r.id ? { ...x, active: !x.active } : x)));
-    try {
-      const updated = await patch<Reminder>(`/reminders/${r.id}`, { active: !r.active });
-      reminders.setData((l) => l?.map((x) => (x.id === r.id ? updated : x)));
-    } catch (err) {
-      toast(errorMessage(err));
-      void reminders.reload();
-    }
-  };
 
   const markDone = async (r: Reminder) => {
     setBusyFor(r.id, true);
@@ -114,15 +103,16 @@ export function RemindersPage() {
 
   const row = (r: Reminder, withDay: boolean) => {
     const d = display(r);
-    const late = r.currentAt !== null && r.currentAt <= nowIso;
-    const chip = !r.active && !late
+    const paused = r.repeat !== 'once' && !r.active;
+    const late = !paused && r.currentAt !== null && r.currentAt <= nowIso;
+    const chip = paused
       ? { background: 'var(--chip-off-bg)', color: 'var(--chip-off-fg)' }
       : late
         ? { background: 'var(--accent)', color: '#FFFFFF' }
         : { background: 'var(--accent-soft)', color: 'var(--accent-dark)' };
     const canDone = r.currentAt !== null;
     return (
-      <div key={r.id} className="item" style={{ padding: '12px 12px 12px 6px', gap: 8 }}>
+      <div key={r.id} className="item" style={{ padding: '12px 14px 12px 6px', gap: 8 }}>
         <button
           type="button"
           className="check"
@@ -152,10 +142,10 @@ export function RemindersPage() {
               : withDay
                 ? `${d.date === today ? 'Hoje, ' : ''}${d.time} · `
                 : ''}
+            {paused ? 'Pausado · ' : ''}
             {repeatLabel(r.repeat, r.intervalHours)}
           </span>
         </button>
-        <Switch on={r.active} label={`Ativar ${r.title}`} onToggle={() => void toggle(r)} />
       </div>
     );
   };
@@ -333,6 +323,7 @@ function ReminderSheet({
   const [time, setTime] = useState(reminder?.time ?? `${String((Number(nowHour.slice(0, 2)) + 1) % 24).padStart(2, '0')}:00`);
   const [repeat, setRepeat] = useState<Repeat>(reminder?.repeat ?? 'once');
   const [intervalHours, setIntervalHours] = useState(String(reminder?.intervalHours ?? 2));
+  const [active, setActive] = useState(reminder ? reminder.active || reminder.repeat === 'once' : true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -346,8 +337,8 @@ function ReminderSheet({
       time,
       repeat,
       intervalHours: repeat === 'hourly' ? Number(intervalHours) : null,
-      // Editar mantém o estado do interruptor; um lembrete encerrado volta a ficar ativo.
-      active: reminder ? reminder.active || !reminder.nextAt : true,
+      // "Uma vez" sempre fica ativo (se a data já passou, o servidor o encerra); repetidos podem ser pausados.
+      active: repeat === 'once' ? true : active,
     };
     try {
       const saved = reminder ? await patch<Reminder>(`/reminders/${reminder.id}`, body) : await post<Reminder>('/reminders', body);
@@ -398,6 +389,17 @@ function ReminderSheet({
           <Field label="Intervalo (horas)">
             <input className="input" type="number" inputMode="numeric" min={1} max={168} value={intervalHours} onChange={(e) => setIntervalHours(e.target.value)} required />
           </Field>
+        )}
+        {repeat !== 'once' && (
+          <div className="row-between" style={{ background: '#fff', borderRadius: 14, padding: '4px 4px 4px 14px', border: '1.5px solid var(--line)' }}>
+            <span className="stack-4" style={{ gap: 2 }}>
+              <strong style={{ fontSize: 15 }}>{active ? 'Lembrete ativo' : 'Lembrete pausado'}</strong>
+              <span className="muted" style={{ fontSize: 13 }}>
+                {active ? 'Notifica nos horários definidos.' : 'Não envia notificações até você reativar.'}
+              </span>
+            </span>
+            <Switch on={active} label="Lembrete ativo" onToggle={() => setActive(!active)} />
+          </div>
         )}
         {error && (
           <p className="error-text" role="alert">

@@ -127,7 +127,6 @@ export async function reminderRoutes(app: FastifyInstance, { db, config }: { db:
     const intervalHours = m.repeat === 'hourly' ? m.intervalHours : null;
     // Sempre recalcula o próximo disparo a partir de agora.
     const next = nextOccurrence({ ...m, intervalHours }, new Date(), true);
-    if (p.active && next === null) throw new HttpError(400, 'Esse lembrete já passou. Escolha uma nova data.');
     const { rows } = await db.query<Row>(
       `UPDATE reminders SET title=$2, date=$3, time=$4, repeat=$5, interval_hours=$6, active=$7, next_at=$8
        WHERE id = $1 RETURNING ${COLS}`,
